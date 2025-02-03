@@ -1,0 +1,25 @@
+<launch>
+  <!-- Declare launch arguments -->
+  <arg 
+    name="input_topic" 
+    default="/livox/lidar" 
+    description="Topic name for the incoming (raw) point cloud"
+  />
+  <arg 
+    name="output_topic" 
+    default="/lidar_filtered" 
+    description="Topic name for the filtered point cloud"
+  />
+
+  <!-- Define the node with remappings -->
+  <node
+    pkg="ros2_rs_pcl"          
+    exec="rs_pcl_filter"              
+    output="screen"
+    name="rspcl_filter_node"
+  >
+    <!-- Remap from the hardcoded topics in the C++ node to the launch arguments -->
+    <remap from="/hesai_lidar/lidar_points" to="$(var input_topic)" />
+    <remap from="/lidar_filtered"           to="$(var output_topic)" />
+  </node>
+</launch>
