@@ -21,7 +21,7 @@
 RspclFilterComponent::RspclFilterComponent() : Node("pclsub")
 {
   subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/hesai_lidar/lidar_points", 
+    "/lidar_points", // "/hesai_lidar/lidar_points"
     10, 
     std::bind(&RspclFilterComponent::timer_callback, this, std::placeholders::_1)\
   );
