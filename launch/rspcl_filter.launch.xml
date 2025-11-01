@@ -15,7 +15,7 @@
   <node
     pkg="ros2_rs_pcl"          
     exec="rs_pcl_filter"              
-    output="screen"
+    output="log"
     name="rspcl_filter_node"
   >
     <!-- Remap from the hardcoded topics in the C++ node to the launch arguments -->

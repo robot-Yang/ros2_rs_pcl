@@ -10,7 +10,8 @@
 
 class RspclFilterComponent : public rclcpp::Node {
 public:
-  RspclFilterComponent();
+  RspclFilterComponent(const rclcpp::NodeOptions & options);
+
 
 private:
   void timer_callback(const sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg);

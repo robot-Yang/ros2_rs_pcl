@@ -22,6 +22,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(pcl_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io filters segmentation search)
+find_package(pluginlib REQUIRED)
 
 include_directories(
   ${PCL_INCLUDE_DIRS}
@@ -31,14 +32,15 @@ include_directories(
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-# Executables
-add_executable(rs_pcl_filter src/filter/rspcl_filter_node.cpp src/filter/rspcl_filter_component.cpp)
-add_executable(rs_pcl_clustering src/clustering/rspcl_clustering_node.cpp src/clustering/rspcl_clustering_component.cpp)
-# add_executable(rs_pcl_marker src/visualization_marker/rspcl_marker.cpp)
 
-# Apply dependencies to the rs_pcl_filter target
-ament_target_dependencies(rs_pcl_filter
-  rclcpp 
+add_library(rs_pcl_filter_composable SHARED
+  src/filter/rspcl_filter_component.cpp
+  src/filter/rspcl_filter_node.cpp
+)
+
+ament_target_dependencies(rs_pcl_filter_composable
+  rclcpp
+  rclcpp_components
   sensor_msgs
   pcl_conversions
   tf2
@@ -47,6 +49,25 @@ ament_target_dependencies(rs_pcl_filter
   tf2_sensor_msgs
 )
 
+rclcpp_components_register_nodes(rs_pcl_filter_composable
+  RspclFilterComponent
+)
+
+target_link_libraries(rs_pcl_filter_composable
+  ${PCL_LIBRARIES}
+)
+
+
+# Executables
+add_executable(rs_pcl_filter src/filter/rspcl_filter_node.cpp src/filter/rspcl_filter_component.cpp)
+add_executable(rs_pcl_clustering src/clustering/rspcl_clustering_node.cpp src/clustering/rspcl_clustering_component.cpp)
+# add_executable(rs_pcl_marker src/visualization_marker/rspcl_marker.cpp)
+
+
+pluginlib_export_plugin_description_file(rclcpp_components plugins.xml)
+
+
+
 # Apply dependencies to the rs_pcl_clustering target
 ament_target_dependencies(rs_pcl_clustering
   rclcpp 
@@ -54,14 +75,26 @@ ament_target_dependencies(rs_pcl_clustering
   pcl_conversions
 )
 
+ament_target_dependencies(rs_pcl_filter
+  rclcpp
+  sensor_msgs
+  pcl_conversions
+  tf2
+  tf2_ros
+  tf2_sensor_msgs
+)
 
-target_link_libraries(rs_pcl_filter ${PCL_LIBRARIES})
+target_link_libraries(rs_pcl_filter
+  rs_pcl_filter_composable
+  ${PCL_LIBRARIES}
+)
 target_link_libraries(rs_pcl_clustering ${PCL_LIBRARIES})
 # target_link_libraries(rs_pcl_marker ${PCL_LIBRARIES})
 
 install(TARGETS
   rs_pcl_filter
   rs_pcl_clustering
+  rs_pcl_filter_composable
   # rs_pcl_marker
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -76,5 +109,10 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+
+install(FILES plugins.xml
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_package()
