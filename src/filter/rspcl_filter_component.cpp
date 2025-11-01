@@ -20,7 +20,10 @@
 
 #include "ros2_rs_pcl/filter/rspcl_filter_component.hpp"
 
-RspclFilterComponent::RspclFilterComponent() : Node("pclsub")
+// Make composable node
+#include "rclcpp_components/register_node_macro.hpp"
+
+RspclFilterComponent::RspclFilterComponent(const rclcpp::NodeOptions & options) : Node("pclsub")
 {
   // Create TF buffer and listener
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -56,20 +59,28 @@ void RspclFilterComponent::timer_callback(const sensor_msgs::msg::PointCloud2::S
   tf2::doTransform(*cloud_msg, transformed_cloud, transform_stamped);
 
   // Now we have the cloud in hesai_lidar frame, proceed with filtering
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromROSMsg(transformed_cloud, *pcl_cloud);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
 
   // Example PassThrough filter on Z-axis
-  pcl::PassThrough<pcl::PointXYZRGB> pass;
+  pcl::PassThrough<pcl::PointXYZ> pass;
   pass.setInputCloud(pcl_cloud);
   pass.setFilterFieldName("z");
-  pass.setFilterLimits(-1.3, 0.1);
+  pass.setFilterLimits(-1.35, -0.4);
+  //pass.setFilterLimits(-1.3, 0.8);  //Original limits
+  pass.filter(*cloud_filtered);
+
+
+  // Example PassThrough filter on X-axis
+  pass.setInputCloud(cloud_filtered);
+  pass.setFilterFieldName("y");
+  pass.setFilterLimits(-6.5, 1);
   pass.filter(*cloud_filtered);
 
   // Example CropBox filter
-  pcl::CropBox<pcl::PointXYZRGB> crop;
+  pcl::CropBox<pcl::PointXYZ> crop;
   crop.setInputCloud(cloud_filtered);
   crop.setMin(Eigen::Vector4f(-0.3, -0.9, -1.4, 1.0));
   crop.setMax(Eigen::Vector4f(0.3, 0.1, 1.0, 1.0));
@@ -83,6 +94,8 @@ void RspclFilterComponent::timer_callback(const sensor_msgs::msg::PointCloud2::S
   // Ensure the frame_id is now hesai_lidar
   sensor_msg.header.frame_id = "hesai_lidar";
 
-  RCLCPP_INFO(this->get_logger(), "Publishing filtered cloud in hesai_lidar frame");
+  //RCLCPP_INFO(this->get_logger(), "Publishing filtered cloud in hesai_lidar frame");
   publisher_->publish(sensor_msg);
 }
+
+RCLCPP_COMPONENTS_REGISTER_NODE(RspclFilterComponent)
