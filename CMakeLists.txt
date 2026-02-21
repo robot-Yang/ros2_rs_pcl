@@ -38,6 +38,7 @@ add_library(rs_pcl_filter_composable SHARED
   src/filter/rspcl_filter_node.cpp
 )
 
+
 ament_target_dependencies(rs_pcl_filter_composable
   rclcpp
   rclcpp_components
@@ -60,6 +61,7 @@ target_link_libraries(rs_pcl_filter_composable
 
 # Executables
 add_executable(rs_pcl_filter src/filter/rspcl_filter_node.cpp src/filter/rspcl_filter_component.cpp)
+add_executable(rs_pcl_filter_seg src/filter/rspcl_filter_node.cpp src/filter/rspcl_filter_component_segm.cpp)
 add_executable(rs_pcl_clustering src/clustering/rspcl_clustering_node.cpp src/clustering/rspcl_clustering_component.cpp)
 # add_executable(rs_pcl_marker src/visualization_marker/rspcl_marker.cpp)
 
@@ -84,15 +86,32 @@ ament_target_dependencies(rs_pcl_filter
   tf2_sensor_msgs
 )
 
+ament_target_dependencies(rs_pcl_filter_seg
+  rclcpp
+  rclcpp_components
+  sensor_msgs
+  pcl_conversions
+  tf2
+  tf2_ros
+  tf2_sensor_msgs
+  tf2_geometry_msgs
+)
+
 target_link_libraries(rs_pcl_filter
   rs_pcl_filter_composable
   ${PCL_LIBRARIES}
 )
+
+target_link_libraries(rs_pcl_filter_seg
+  ${PCL_LIBRARIES}
+)
+
 target_link_libraries(rs_pcl_clustering ${PCL_LIBRARIES})
 # target_link_libraries(rs_pcl_marker ${PCL_LIBRARIES})
 
 install(TARGETS
   rs_pcl_filter
+  rs_pcl_filter_seg 
   rs_pcl_clustering
   rs_pcl_filter_composable
   # rs_pcl_marker
