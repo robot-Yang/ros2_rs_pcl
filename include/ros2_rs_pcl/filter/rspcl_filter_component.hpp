@@ -15,12 +15,15 @@
 #include <pcl/point_cloud.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
-
+#include <deque>
 
 class RspclFilterComponent : public rclcpp::Node {
 public:
   RspclFilterComponent(const rclcpp::NodeOptions & options);
   pcl::PointCloud<pcl::PointXYZ>::Ptr euclideanClusterExtraction(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud);
+  void publishCombinedPlane(const rclcpp::Time &stamp, const std_msgs::msg::Header &header);
+  bool waitForTransform(const std::string &target_frame, const std::string &source_frame, const rclcpp::Time &time, const rclcpp::Duration &timeout);
+  
 
 
 private:
@@ -33,6 +36,8 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher2_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscriber_;
+  std::deque<std::pair<rclcpp::Time, pcl::PointCloud<pcl::PointXYZ>::Ptr>> plane_buffer_;
+  rclcpp::Duration plane_memory_duration_{1, 0}; // 1 second
 };
 
 #endif // RSPCL_FILTER_COMPONENT_HPP_
