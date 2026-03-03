@@ -37,7 +37,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher2_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscriber_;
   std::deque<std::pair<rclcpp::Time, pcl::PointCloud<pcl::PointXYZ>::Ptr>> plane_buffer_;
-  rclcpp::Duration plane_memory_duration_{1, 0}; // 1 second
+  rclcpp::Duration plane_memory_duration_{2, 0}; // 1 second
 };
 
 #endif // RSPCL_FILTER_COMPONENT_HPP_

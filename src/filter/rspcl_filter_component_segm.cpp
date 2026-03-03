@@ -110,10 +110,13 @@ void RspclFilterComponent::timer_callback(const sensor_msgs::msg::PointCloud2::S
   ne.setKSearch(20);
   ne.compute(*cloud_normals);
 
-  // Set up SACSegmentationFromNormals for horizontal planes
+  // Set up SACSegmentationFromNormals
+  // 
+  //  Vertical planes filtering
+
   pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
   seg.setOptimizeCoefficients(true);
-  seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+  seg.setModelType(pcl::SACMODEL_PARALLEL_PLANE);
   seg.setNormalDistanceWeight(0.1);
   seg.setMethodType(pcl::SAC_RANSAC);
   seg.setMaxIterations(100);
@@ -121,9 +124,9 @@ void RspclFilterComponent::timer_callback(const sensor_msgs::msg::PointCloud2::S
   seg.setInputCloud(cloud_filtered);
   seg.setInputNormals(cloud_normals);
 
-  // Only accept planes with normals close to Z axis (horizontal)
+  // Reject planes at 45 deg Z axis or less
   seg.setAxis(Eigen::Vector3f(0.0, 0.0, 1.0));
-  seg.setEpsAngle(pcl::deg2rad(10.0)); // 15 degree tolerance
+  seg.setEpsAngle(pcl::deg2rad(10.0)); // 45 degree tolerance
 
   pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -131,17 +134,46 @@ void RspclFilterComponent::timer_callback(const sensor_msgs::msg::PointCloud2::S
 
   
   if (inliers->indices.empty()) {
-    RCLCPP_WARN(get_logger(), "No horizontal plane found.");
+    RCLCPP_WARN(get_logger(), "No vertical plane found.");
     return;
   }
 
 
-  // Extract only the horizontal plane points
+  // Remove nearly vertical plane points
   pcl::ExtractIndices<pcl::PointXYZ> extract;
+  extract.setInputCloud(cloud_filtered);
+  extract.setIndices(inliers);
+  extract.setNegative(true);
+  extract.filter(*cloud_filtered);
+
+  // Horizontal planes segmentation
+  //
+  // Re-estimate normals
+
+  ne.setInputCloud(cloud_filtered);
+  ne.compute(*cloud_normals);
+
+
+  seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+  seg.setInputCloud(cloud_filtered);
+  seg.setInputNormals(cloud_normals);
+
+  seg.setEpsAngle(pcl::deg2rad(10.0)); // 15 degree tolerance
+
+  seg.segment(*inliers, *coefficients); //inliers is overwriten
+
+  
+  if (inliers->indices.empty()) {
+    RCLCPP_WARN(get_logger(), "No horizontal plane found.");
+    return;
+  }
+
+  // Extract only the horizontal plane points
   extract.setInputCloud(cloud_filtered);
   extract.setIndices(inliers);
   extract.setNegative(false);
   extract.filter(*cloud_segmented);
+
 
   // Obtain the closest cluster
   cloud_segmented=euclideanClusterExtraction(cloud_segmented);
@@ -186,7 +218,7 @@ RspclFilterComponent::euclideanClusterExtraction(const pcl::PointCloud<pcl::Poin
 
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.2); // 2cm
+  ec.setClusterTolerance (0.15); // 2cm
   ec.setMinClusterSize (150);
   ec.setMaxClusterSize (10000);
   ec.setSearchMethod(tree);
